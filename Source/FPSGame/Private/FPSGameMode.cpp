@@ -38,7 +38,6 @@ void AFPSGameMode::CompleteMission(APawn* InstigatorPawn)
 				{
 					PC->SetViewTargetWithBlend(NewViewTarget, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
 				}
-
 			}
 		}
 		else
@@ -46,12 +45,9 @@ void AFPSGameMode::CompleteMission(APawn* InstigatorPawn)
 			UE_LOG(LogTemp, Warning, 
 				TEXT("SpectatingViewpointClass is nullptr. Please update GameMode class blue print with valid subclass. Cannot change spectating view target"));
 		}
-
-
 	}
 
 	OnMissionCompleted(InstigatorPawn);
 
-	
 }
 
