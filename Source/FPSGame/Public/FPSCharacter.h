@@ -12,6 +12,7 @@ class UCameraComponent;
 class AFPSProjectile;
 class USoundBase;
 class UAnimSequenceBase;
+class UPawnNoiseEmitterComponent;
 
 
 UCLASS()
@@ -33,6 +34,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	UCameraComponent* CameraComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
+	UPawnNoiseEmitterComponent* NoiseEmitterComponent;
+
 public:
 	AFPSCharacter();
 
@@ -48,11 +52,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay")
 	UAnimSequenceBase* FireAnimation;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Gameplay")
+	// Make this property replicated so clients get this information
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Gameplay")
 	bool bIsCarryingObjective;
 
 protected:
 	
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerFire();
+
 	/** Fires a projectile. */
 	void Fire();
 
@@ -62,6 +70,8 @@ protected:
 	/** Handles strafing movement, left and right */
 	void MoveRight(float Val);
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 public:
@@ -70,6 +80,8 @@ public:
 
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return CameraComponent; }
+
+	virtual void Tick(float DeltaTime) override;
 
 };
 

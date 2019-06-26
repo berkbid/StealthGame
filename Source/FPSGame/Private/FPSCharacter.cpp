@@ -6,6 +6,8 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/PawnNoiseEmitterComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 AFPSCharacter::AFPSCharacter()
@@ -29,6 +31,9 @@ AFPSCharacter::AFPSCharacter()
 	GunMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FP_Gun"));
 	GunMeshComponent->CastShadow = false;
 	GunMeshComponent->SetupAttachment(Mesh1PComponent, "GripPoint");
+
+	NoiseEmitterComponent = CreateDefaultSubobject<UPawnNoiseEmitterComponent>("NoiseEmitterComponent");
+
 }
 
 
@@ -45,30 +50,29 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
+
+
 }
 
+void AFPSCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Only if character is not locally controlled, THEN we update the mesh component for up and down looking for players we are looking at
+	if (!IsLocallyControlled())
+	{
+		FRotator NewRot = CameraComponent->RelativeRotation;
+		// RemoteViewPitch is a uint8 and we do the reverse math that was done when it was turned to a byte (uint8) from a float in the pawn class
+		NewRot.Pitch = (float)(RemoteViewPitch * 360.f / 255.f);
+
+		CameraComponent->SetRelativeRotation(NewRot);
+	}
+
+}
 
 void AFPSCharacter::Fire()
 {
-	// try and fire a projectile
-	if (ProjectileClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Fired!"));
-		FVector MuzzleLocation = GunMeshComponent->GetSocketLocation("Muzzle");
-		FRotator MuzzleRotation = GunMeshComponent->GetSocketRotation("Muzzle");
-
-		//Set Spawn Collision Handling Override
-		FActorSpawnParameters ActorSpawnParams;
-		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-
-		// spawn the projectile at the muzzle
-		AFPSProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AFPSProjectile>(ProjectileClass, MuzzleLocation, MuzzleRotation, ActorSpawnParams);
-
-		if (SpawnedProjectile)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Actor Spawned: %s"), *SpawnedProjectile->GetName());
-		}
-	}
+	ServerFire();
 
 	// try and play the sound if specified
 	if (FireSound)
@@ -88,6 +92,37 @@ void AFPSCharacter::Fire()
 		}
 	}
 }
+void AFPSCharacter::ServerFire_Implementation()
+{
+	// try and fire a projectile
+	if (ProjectileClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Fired!"));
+		FVector MuzzleLocation = GunMeshComponent->GetSocketLocation("Muzzle");
+		FRotator MuzzleRotation = GunMeshComponent->GetSocketRotation("Muzzle");
+
+		//Set Spawn Collision Handling Override
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		ActorSpawnParams.Instigator = this;
+
+		// spawn the projectile at the muzzle
+		AFPSProjectile* SpawnedProjectile = GetWorld()->SpawnActor<AFPSProjectile>(ProjectileClass, MuzzleLocation, MuzzleRotation, ActorSpawnParams);
+
+		if (SpawnedProjectile)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Actor Spawned: %s"), *SpawnedProjectile->GetName());
+		}
+	}
+}
+
+bool AFPSCharacter::ServerFire_Validate()
+{
+	return true;
+}
+
+
+
 
 
 void AFPSCharacter::MoveForward(float Value)
@@ -107,4 +142,15 @@ void AFPSCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(GetActorRightVector(), Value);
 	}
+}
+
+// This function needed to add replicated properties such as "GuardState" to tell Unreal the replication rules
+void AFPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//DOREPLIFETIME(AFPSCharacter, bIsCarryingObjective);
+
+	// Only sent to whoever is controlling this character
+	DOREPLIFETIME_CONDITION(AFPSCharacter, bIsCarryingObjective, COND_OwnerOnly);
 }

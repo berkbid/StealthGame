@@ -6,6 +6,9 @@
 #include "UObject/ConstructorHelpers.h"
 #include "Sound/SoundBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "FPSAIGuard.h"
+#include "FPSGameState.h"
+#include "Engine/World.h"
 
 AFPSGameMode::AFPSGameMode()
 {
@@ -15,39 +18,19 @@ AFPSGameMode::AFPSGameMode()
 
 	// use our custom HUD class
 	HUDClass = AFPSHUD::StaticClass();
+
+	// can try to get gamestateclass here also to the BP_GameState, already set in BP_GameMode though
+	//GameStateClass = 
 }
 
-void AFPSGameMode::CompleteMission(APawn* InstigatorPawn)
+// Only server runs this code
+void AFPSGameMode::CompleteMission(APawn* InstigatorPawn, bool bMissionSuccess)
 {
-	if (InstigatorPawn)
+	// I moved viewpoint changing logic into FPSGameState method call below
+	AFPSGameState* GS = GetGameState<AFPSGameState>();
+	if (GS)
 	{
-		UGameplayStatics::PlaySound2D(this, WinSound);
-		InstigatorPawn->DisableInput(nullptr);
-
-		if (SpectatingViewpointClass)
-		{
-			TArray<AActor*> ReturnedActors;
-			UGameplayStatics::GetAllActorsOfClass(this, SpectatingViewpointClass, ReturnedActors);
-
-			// Change viewtarget if any valid actor found
-			if (ReturnedActors.Num() > 0)
-			{
-				AActor* NewViewTarget = ReturnedActors[0];
-
-				if (APlayerController* PC = Cast<APlayerController>(InstigatorPawn->GetController()))
-				{
-					PC->SetViewTargetWithBlend(NewViewTarget, 0.5f, EViewTargetBlendFunction::VTBlend_Cubic);
-				}
-			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, 
-				TEXT("SpectatingViewpointClass is nullptr. Please update GameMode class blue print with valid subclass. Cannot change spectating view target"));
-		}
+		GS->MulticastOnMissionComplete(InstigatorPawn, bMissionSuccess);
 	}
-
-	OnMissionCompleted(InstigatorPawn);
-
 }
 

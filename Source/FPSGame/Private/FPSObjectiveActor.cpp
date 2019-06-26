@@ -30,6 +30,8 @@ AFPSObjectiveActor::AFPSObjectiveActor()
 	SphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	SphereComp->SetupAttachment(MeshComp);
 
+	SetReplicates(true);
+
 }
 
 // Called when the game starts or when spawned
@@ -50,16 +52,23 @@ void AFPSObjectiveActor::PlayEffects()
 void AFPSObjectiveActor::NotifyActorBeginOverlap(AActor * OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
+
+	// Both clients and server see and hear these effects and sound
 	PlayEffects();
+	UGameplayStatics::PlaySound2D(this, ObjectivePickedUpSound, VolumeMultiplier);
 
-	if (AFPSCharacter* MyCharacter = Cast<AFPSCharacter>(OtherActor))
+	// Only run as server
+	if (Role == ROLE_Authority)
 	{
-		UGameplayStatics::PlaySound2D(this, ObjectivePickedUpSound, VolumeMultiplier);
+		if (AFPSCharacter* MyCharacter = Cast<AFPSCharacter>(OtherActor))
+		{
+			// Only set to true on server here, but we setup replication for clients in FPSCharacter.cpp
+			MyCharacter->bIsCarryingObjective = true;
 
-		MyCharacter->bIsCarryingObjective = true;
-
-		Destroy();
+			Destroy();
+		}
 	}
+
 
 }
 

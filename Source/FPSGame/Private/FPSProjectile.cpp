@@ -29,16 +29,31 @@ AFPSProjectile::AFPSProjectile()
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
+
+	// Set this for actor you want replicated to clients, actor channel is now open, server tells client to update data in order to syncronize
+	SetReplicates(true);
+	SetReplicateMovement(true);
+
 }
 
 
 void AFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
+	// HitComp = SphereComp, this projectile's sphere component is what did the hitting
 	// Only add impulse and destroy projectile if we hit a physics
 	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("HitComp: %s"), *HitComp->GetName());
 		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+	}
 
+	// If machine is server
+	if (Role == ROLE_Authority)
+	{
+		// Only want server to do these things
+		MakeNoise(1.f, Instigator);
 		Destroy();
 	}
+
+	
 }
