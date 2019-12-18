@@ -6,4 +6,4 @@ Short Multiplayer Game (UE4/C++), originally started from a course on Udemy.com
 ![StealthGame Pic](https://berkbid.github.io/Images/StealthGame.png)
 
 ## Features
-- Inventory HUD Display
+- 
