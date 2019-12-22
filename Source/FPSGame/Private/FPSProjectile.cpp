@@ -48,10 +48,10 @@ void AFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPr
 	}
 
 	// If machine is server
-	if (Role == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		// Only want server to do these things
-		MakeNoise(1.f, Instigator);
+		MakeNoise(1.f, GetInstigator());
 		Destroy();
 	}
 

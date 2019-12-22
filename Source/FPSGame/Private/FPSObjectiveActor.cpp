@@ -58,7 +58,7 @@ void AFPSObjectiveActor::NotifyActorBeginOverlap(AActor * OtherActor)
 	UGameplayStatics::PlaySound2D(this, ObjectivePickedUpSound, VolumeMultiplier);
 
 	// Only run as server
-	if (Role == ROLE_Authority)
+	if (GetLocalRole() == ROLE_Authority)
 	{
 		if (AFPSCharacter* MyCharacter = Cast<AFPSCharacter>(OtherActor))
 		{
